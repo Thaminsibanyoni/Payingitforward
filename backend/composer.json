@@ -11,6 +11,7 @@
         "laravel/passport": "^12.4",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.9",
+        "laravel/ui": "^4.6",
         "spatie/laravel-db-snapshots": "^2.7"
     },
     "require-dev": {

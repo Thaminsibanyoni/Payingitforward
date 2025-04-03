@@ -2,62 +2,75 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
-    // PayPal Integration
-    public function handlePayPalCallback(Request $request)
+    public function createPayment(Request $request)
     {
-        $paymentId = $request->input('paymentId');
-        $payerId = $request->input('PayerID');
+        $request->validate([
+            'amount' => 'required|numeric',
+            'currency' => 'required|string',
+            'user_id' => 'required|exists:users,id',
+        ]);
 
-        $response = Http::withBasicAuth(
-            config('services.paypal.client_id'),
-            config('services.paypal.secret')
-        )->post(config('services.paypal.url').'/v1/payments/payment/'.$paymentId.'/execute', [
-            'payer_id' => $payerId
+        $response = Http::post('https://sandbox.payfast.co.za/eng/process', [
+            'merchant_id' => env('PAYFAST_MERCHANT_ID'),
+            'merchant_key' => env('PAYFAST_MERCHANT_KEY'),
+            'amount' => $request->amount,
+            'item_name' => 'Donation',
+            'return_url' => route('payment.callback'),
+            'cancel_url' => route('payment.cancel'),
+            'notify_url' => route('payment.notify'),
         ]);
 
         if ($response->successful()) {
-            // Process successful payment
+            $payment = Payment::create([
+                'user_id' => $request->user_id,
+                'amount' => $request->amount,
+                'currency' => $request->currency,
+                'status' => 'pending',
+                'transaction_id' => $response->json('pf_payment_id'),
+            ]);
+
             return response()->json([
-                'status' => 'completed',
-                'txn_id' => $response->json('id')
+                'payment_url' => $response->json('form_url'),
+                'payment_id' => $payment->id,
             ]);
         }
 
-        Log::error('PayPal payment failed: '.$response->body());
-        return response()->json(['error' => 'Payment failed'], 400);
+        return response()->json(['error' => 'Payment creation failed'], 500);
     }
 
-    // Binance Integration
-    public function createBinanceOrder(Request $request)
+    public function paymentCallback(Request $request)
     {
-        $validated = $request->validate([
-            'amount' => 'required|numeric',
-            'currency' => 'required|string|size:3'
-        ]);
+        $payment = Payment::where('transaction_id', $request->pf_payment_id)->first();
+        if ($payment) {
+            $payment->update([
+                'status' => 'completed',
+            ]);
+        }
 
-        $payload = [
-            'merchantTradeNo' => uniqid(),
-            'totalAmount' => $validated['amount'],
-            'currency' => $validated['currency'],
-            'timestamp' => time()
-        ];
+        return view('payment.success');
+    }
 
-        $signature = hash_hmac('sha256', http_build_query($payload), 
-            config('services.binance.secret'));
+    public function paymentCancel(Request $request)
+    {
+        $payment = Payment::where('transaction_id', $request->pf_payment_id)->first();
+        if ($payment) {
+            $payment->update([
+                'status' => 'cancelled',
+            ]);
+        }
 
-        $response = Http::withHeaders([
-            'X-MBX-APIKEY' => config('services.binance.key')
-        ])->post(config('services.binance.url').'/sapi/v1/payment/create', [
-            ...$payload,
-            'signature' => $signature
-        ]);
+        return view('payment.cancel');
+    }
 
-        return $response->json();
+    public function paymentNotify(Request $request)
+    {
+        // Handle payment notification from PayFast
+        // Update payment status based on the notification
     }
 }

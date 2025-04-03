@@ -1,44 +1,28 @@
 <?php
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ActController;
-use App\Http\Controllers\AuthController;
+use App\Http\Controllers\LikeController;
+use App\Http\Controllers\CommentController;
+use App\Http\Controllers\RewardController;
+use App\Http\Controllers\DonationController;
+use App\Http\Controllers\WalletController;
+use App\Http\Controllers\PointController;
 use App\Http\Controllers\PaymentController;
 
-Route::prefix('v1')->group(function() {
-    // Authentication routes
-    Route::post('/login', [AuthController::class, 'login']);
-    Route::post('/register', [AuthController::class, 'register']);
-    
-    // Protected routes
-    Route::middleware('auth:sanctum')->group(function () {
-        // User endpoints
-        Route::get('/user', [AuthController::class, 'getCurrentUser']);
-        Route::put('/user', [AuthController::class, 'updateProfile']);
-        Route::post('/user/kyc', [AuthController::class, 'submitKyc']);
-        Route::get('/user/transactions', [AuthController::class, 'getTransactions']);
-        
-        // Notifications
-        Route::get('/notifications', [AuthController::class, 'getNotifications']);
-        Route::put('/notifications/{id}/read', [AuthController::class, 'markNotificationRead']);
+Route::apiResource('acts', ActController::class);
+Route::post('/acts/{act}/likes', [LikeController::class, 'store']);
+Route::post('/acts/{act}/comments', [CommentController::class, 'store']);
 
-        // Act endpoints
-        Route::apiResource('acts', ActController::class)->only([
-            'index', 'store'
-        ]);
-        
-        Route::post('/acts/{act}/complete', [ActController::class, 'complete']);
-        Route::post('/acts/{act}/pay-forward', [ActController::class, 'payForward']);
-        
-        // Blockchain endpoints
-        Route::post('/blockchain/register', [ActController::class, 'registerOnChain']);
-        Route::post('/blockchain/log-act', [ActController::class, 'logActOnChain']);
-        Route::get('/blockchain/balance/{address}', [ActController::class, 'getTokenBalance']);
-        
-        // Payment endpoints
-        Route::post('/payments/deposit', [PaymentController::class, 'initiateDeposit']);
-        Route::post('/payments/withdraw', [PaymentController::class, 'initiateWithdrawal']);
-        Route::get('/payments/gateways', [PaymentController::class, 'getPaymentGateways']);
-    });
+Route::apiResource('rewards', RewardController::class);
+Route::apiResource('donations', DonationController::class);
+Route::apiResource('wallets', WalletController::class);
+Route::apiResource('points', PointController::class);
+
+Route::post('/donations/process', [DonationController::class, 'processDonation']);
+Route::post('/donations/approve', [DonationController::class, 'approveDonation']);
+Route::post('/rewards/approve', [RewardsController::class, 'approveReward']);
+
+Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+    return $request->user();
 });

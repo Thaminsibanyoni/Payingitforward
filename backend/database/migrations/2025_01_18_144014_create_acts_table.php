@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignId('receiver_id')->nullable()->constrained('users');
             $table->string('title');
             $table->text('description');
+            $table->string('image_url')->nullable();
             $table->enum('status', ['pending', 'completed', 'paid_forward'])->default('pending');
             $table->timestamps();
             $table->softDeletes();

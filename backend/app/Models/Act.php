@@ -4,27 +4,36 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Act extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
-        'giver_id',
-        'receiver_id',
+        'user_id',
+        'category_id',
         'title',
         'description',
-        'status'
+        'image_url',
     ];
 
-    public function giver()
+    public function user()
     {
-        return $this->belongsTo(User::class, 'giver_id');
+        return $this->belongsTo(User::class);
     }
 
-    public function receiver()
+    public function category()
     {
-        return $this->belongsTo(User::class, 'receiver_id');
+        return $this->belongsTo(Category::class);
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
+
+    public function likes()
+    {
+        return $this->hasMany(Like::class);
     }
 }
